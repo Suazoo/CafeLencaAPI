@@ -69,6 +69,7 @@ uvicorn app.main:app --reload
   ]
 }
 ```
+Si un producto tiene receta en `ingrediente_has_producto`, el motor lógico valida y descuenta el inventario relacionado. Los productos sin receta registrada no bloquean el pedido por inventario.
 ## 5. Los cinco paradigmas
 
 Los ejemplos académicos están separados en `app/paradigmas/`:
@@ -80,5 +81,3 @@ Los ejemplos académicos están separados en `app/paradigmas/`:
 - `declarativo.py`: consultas ORM que describen los datos deseados; los modelos están en `app/models/`.
 
 `app/motor_logico/` contiene reglas ejecutables reales de disponibilidad, cantidades, inventario y recomendaciones.
-
-
