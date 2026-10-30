@@ -19,11 +19,6 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
-
-Edita `.env` y coloca la URL real de conexión de Supabase. Para el pooler de Supabase puedes usar el host/puerto que proporciona Supabase; si usas el puerto 6543, no añadas `?pgbouncer=true`. No compartas el `.env` ni lo subas a GitHub.
-
-Si PowerShell bloquea la activación del entorno virtual, abre una terminal CMD o ejecuta el Python del entorno virtual directamente.
-
 ## 3. Iniciar API
 
 ```powershell
@@ -74,11 +69,6 @@ uvicorn app.main:app --reload
   ]
 }
 ```
-
-Los identificadores deben existir previamente en tu base de datos. La API crea el pedido, sus detalles y una factura en una sola transacción. La tasa de impuesto es configurable con `TAX_RATE` (por defecto `0.15` para el ejemplo académico); confirma con tu docente la tasa que corresponde al alcance del proyecto.
-
-Si un producto tiene receta en `ingrediente_has_producto`, el motor lógico valida y descuenta el inventario relacionado. Los productos sin receta registrada no bloquean el pedido por inventario.
-
 ## 5. Los cinco paradigmas
 
 Los ejemplos académicos están separados en `app/paradigmas/`:
@@ -91,13 +81,4 @@ Los ejemplos académicos están separados en `app/paradigmas/`:
 
 `app/motor_logico/` contiene reglas ejecutables reales de disponibilidad, cantidades, inventario y recomendaciones.
 
-## 6. Importante sobre la base de datos
 
-Este backend **no ejecuta `Base.metadata.create_all()` ni modifica automáticamente el esquema**. El mapeo ORM se basa en las tablas del `sql/schema.sql` que venían en el proyecto. Antes de usar cada módulo, verifica que el esquema real de Supabase coincida con ese archivo. No vuelvas a ejecutar el DDL si las tablas ya existen.
-
-## 7. Antes de publicar
-
-- Cambia cualquier contraseña que se haya compartido en chats o repositorios.
-- Configura `DATABASE_URL`, `TAX_RATE` y `CORS_ORIGINS` como variables de entorno en el hosting.
-- En producción, limita CORS al dominio real del frontend.
-- Prueba `/health/db` y las operaciones principales desde `/docs` antes de conectar Vue.
