@@ -1,0 +1,19 @@
+# Entornos y dependencias
+venv/
+.venv/
+env/
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secretos y variables locales
+.env
+.env.*
+!.env.example
+
+# Editor / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
