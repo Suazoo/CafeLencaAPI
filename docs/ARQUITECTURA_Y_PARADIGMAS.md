@@ -19,6 +19,8 @@ app/services/      Casos de uso y transacciones de negocio
         v
 app/models/        Mapeo declarativo SQLAlchemy de las tablas existentes
         |
+        +------> sql/functions.sql  Función RPC transaccional en Supabase
+        |
         v
 app/core/database.py  Sesiones y conexión PostgreSQL/Supabase
 ```
@@ -46,11 +48,12 @@ Las claves y nombres de columnas están mapeados desde `sql/schema.sql`. No se c
 
 ## Flujo transaccional de un pedido
 
-1. Validar los identificadores de cliente/mesa/método de pago/empleado enviados.
-2. Verificar que los productos existan, estén activos y tengan cantidades válidas.
-3. Calcular subtotal, descuento, impuesto y total con funciones puras.
-4. Crear el pedido y sus detalles.
-5. Si hay receta configurada, validar y descontar ingredientes del inventario.
-6. Crear factura.
-7. Confirmar todo con un único `commit`; ante un error se hace `rollback`.
+1. FastAPI valida la forma del JSON y la API prepara el payload.
+2. `public.registrar_pedido(jsonb)` valida referencias, productos y cantidades.
+3. La función calcula subtotal, descuento, impuesto y total.
+4. La función crea pedido, detalles y factura.
+5. Si hay receta configurada, bloquea y descuenta ingredientes del inventario.
+6. La transacción se confirma en PostgreSQL; ante un error se revierte completa.
 
+La IA solo interpreta solicitudes sobre el catálogo que el motor lógico ya filtró.
+Nunca decide por sí sola si un producto existe, está activo o puede prepararse.

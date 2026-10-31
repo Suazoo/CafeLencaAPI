@@ -1,5 +1,5 @@
-"""Compara los nombres de tablas/columnas del ORM con la base existente.
-
+"""
+Verifica que las tablas y columnas del ORM coincidan con la base de datos.
 Ejecutar solo después de configurar .env. Es una verificación de solo lectura.
 """
 from sqlalchemy import inspect

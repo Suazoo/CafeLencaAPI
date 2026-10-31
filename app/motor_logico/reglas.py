@@ -1,5 +1,6 @@
 """Motor lógico de reglas de negocio de Café Lenca."""
 from decimal import Decimal
+from sqlalchemy import exists, or_, select
 from sqlalchemy.orm import Session
 from app.models.Producto import Producto
 from app.models.Ingrediente_has_Producto import Ingrediente_has_Producto
@@ -52,7 +53,33 @@ def validar_y_descontar_receta(db: Session, producto_id: int, cantidad_producto:
     return alertas
 
 def recomendar_productos(db: Session, limite: int = 5):
-    """Devuelve productos activos con menor precio como recomendación inicial."""
+    """Devuelve productos activos que pueden prepararse con el inventario actual."""
     limite = max(1, min(int(limite), 20))
-    productos = db.query(Producto).filter(Producto.estado.in_(tuple(ESTADOS_ACTIVOS))).order_by(Producto.precio, Producto.nombre).limit(limite).all()
-    return productos
+    ingredientes_sin_stock = (
+        select(Ingrediente_has_Producto.Producto_idProducto)
+        .outerjoin(
+            Inventario,
+            Inventario.Ingrediente_idIngrediente
+            == Ingrediente_has_Producto.Ingrediente_idIngrediente,
+        )
+        .where(
+            or_(
+                Inventario.idInventario.is_(None),
+                Inventario.cantidad_actual < Ingrediente_has_Producto.cantidad,
+            )
+        )
+        .distinct()
+        .subquery()
+    )
+    return (
+        db.query(Producto)
+        .filter(
+            Producto.estado.in_(tuple(ESTADOS_ACTIVOS)),
+            ~exists().where(
+                Producto.idProducto == ingredientes_sin_stock.c.Producto_idProducto
+            ),
+        )
+        .order_by(Producto.precio, Producto.nombre)
+        .limit(limite)
+        .all()
+    )

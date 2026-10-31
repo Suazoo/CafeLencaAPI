@@ -1,4 +1,4 @@
-"""Paradigma orientado a objetos: herencia y encapsulación de reglas de negocio."""
+"""Demostración académica de clases, herencia y encapsulamiento."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from decimal import Decimal
@@ -8,6 +8,30 @@ class ReglaNegocio(ABC):
     @abstractmethod
     def validar_cantidad(self, cantidad: int) -> None:
         raise NotImplementedError
+
+
+class PersonaCafe(ABC):
+    def __init__(self, nombre: str):
+        self._nombre = nombre.strip()
+
+    @property
+    def nombre(self) -> str:
+        return self._nombre
+
+    @abstractmethod
+    def tipo(self) -> str:
+        raise NotImplementedError
+
+
+class ClienteCafe(PersonaCafe):
+    def tipo(self) -> str:
+        return "cliente"
+
+
+class EmpleadoCafe(PersonaCafe):
+    def tipo(self) -> str:
+        return "empleado"
+
 
 @dataclass(frozen=True)
 class PoliticaPedido(ReglaNegocio):

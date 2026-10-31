@@ -19,6 +19,8 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
+
+
 ## 3. Iniciar API
 
 ```powershell
@@ -29,6 +31,11 @@ uvicorn app.main:app --reload
 - Raíz: http://127.0.0.1:8000/
 - Estado de API: http://127.0.0.1:8000/health
 - Estado de base de datos: http://127.0.0.1:8000/health/db
+
+Antes de crear pedidos, ejecuta `sql/schema.sql` y después `sql/functions.sql` en el
+SQL Editor de Supabase. La función `public.registrar_pedido(jsonb)` es la operación
+transaccional usada por la API para crear pedido, detalles, factura y descuento de
+inventario. No contiene credenciales y puede revisarse como parte del código fuente.
 
 ## 4. Endpoints preparados para el frontend
 
@@ -152,17 +159,33 @@ en [MotorLogicoView.vue](../../Frontend/Cafe-Lenca/src/views/MotorLogicoView.vue
 
 ## 6. Los cinco paradigmas
 
-Los ejemplos académicos están separados en `app/paradigmas/`:
+Los ejemplos académicos están separados en `app/paradigmas/` y no son necesarios para
+levantar la API. Su objetivo es facilitar la lectura y defensa del proyecto:
 
-- `imperativo.py`: secuencia de pasos del proceso de pedido.
-- `orientado_objetos.py`: clase abstracta `ReglaNegocio`, herencia y política de pedido encapsulada.
-- `funcional.py`: funciones puras para normalización y cálculos monetarios, usadas por pedidos/clientes.
-- `logico.py`: reglas declarativas de venta, conectadas con `app/motor_logico/reglas.py`.
-- `declarativo.py`: consultas ORM que describen los datos deseados; los modelos están en `app/models/`.
+- `imperativo.py`: variables, secuencia, ciclo y condicionales para evaluar ventas.
+- `orientado_objetos.py`: clases, constructor, encapsulamiento, herencia y una política de pedido.
+- `funcional.py`: funciones puras con `map`, `filter`, `reduce` y recursividad.
+- `logico.py`: hechos, reglas e inferencia para decidir si un producto puede venderse.
+- `declarativo.py`: consultas ORM con selección, filtros, agrupación y ordenamiento.
 
-`app/motor_logico/` contiene reglas ejecutables reales de disponibilidad, cantidades, inventario y recomendaciones.
+`app/motor_logico/` contiene reglas ejecutables reales de disponibilidad, cantidades,
+inventario y recomendaciones. La carpeta `app/paradigmas/` es únicamente demostrativa.
 
-## 7. Posibles usos futuros de la IA
+## 7. Usos actuales y futuros de la IA
+
+Las utilidades actualmente disponibles desde el frontend son:
+
+- **Asistente para tomar pedidos:** `POST /motor-logico/ia/pedido` convierte frases
+  naturales en productos y cantidades del catálogo validado.
+- **Resumen de ventas:** `POST /motor-logico/ia/resumen-ventas` explica un reporte
+  y devuelve puntos clave y una recomendación.
+- **Alertas inteligentes de inventario:** `POST /motor-logico/ia/alertas-inventario`
+  prioriza alertas recibidas y propone una acción.
+
+Estas funciones no reemplazan las reglas de negocio: el backend valida el catálogo
+antes de construir propuestas de pedidos y no permite usar productos inexistentes.
+
+Otros usos que pueden agregarse en el futuro:
 
 - **Asistente para tomar pedidos:** convertir frases naturales en productos y cantidades para
   preparar un pedido.
@@ -173,3 +196,14 @@ Los ejemplos académicos están separados en `app/paradigmas/`:
   usando únicamente información del sistema.
 - **Pronóstico de demanda:** estimar qué productos podrían venderse más en determinados días.
 - **Clasificación de comentarios:** detectar satisfacción, quejas y oportunidades de mejora.
+
+## 8. Pruebas
+
+Ejecuta desde `cafe-paradigmas`:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+Las pruebas no necesitan conectarse a Supabase; validan los ejemplos de paradigmas y
+las reglas puras para evitar regresiones durante la refactorización.

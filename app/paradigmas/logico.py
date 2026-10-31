@@ -1,19 +1,22 @@
-"""Paradigma lógico: reglas expresadas como condiciones verificables.
-
-Las reglas ejecutables viven en app.motor_logico.reglas y se usan al crear
-pedidos.
-"""
+"""Demostración académica de hechos, reglas e inferencia."""
 from app.motor_logico.reglas import producto_activo, cantidad_valida
 
-def puede_venderse(producto, cantidad: int) -> bool:
-    return inferir_venta(hechos_producto(producto, cantidad))["puede_venderse"]
+def puede_venderse(producto, cantidad: int, inventario_suficiente: bool = True) -> bool:
+    return inferir_venta(
+        hechos_producto(producto, cantidad, inventario_suficiente)
+    )["puede_venderse"]
 
 
-def hechos_producto(producto, cantidad: int) -> dict[str, bool]:
+def hechos_producto(
+    producto,
+    cantidad: int,
+    inventario_suficiente: bool = True,
+) -> dict[str, bool]:
     """Construye los hechos que serán evaluados por las reglas de venta."""
     return {
         "producto_activo": producto_activo(producto),
         "cantidad_valida": cantidad_valida(cantidad),
+        "inventario_suficiente": inventario_suficiente,
     }
 
 
@@ -22,6 +25,7 @@ def inferir_venta(hechos: dict[str, bool]) -> dict[str, bool | str]:
     puede_venderse = (
         hechos.get("producto_activo", False)
         and hechos.get("cantidad_valida", False)
+        and hechos.get("inventario_suficiente", False)
     )
     return {
         **hechos,

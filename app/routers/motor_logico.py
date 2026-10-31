@@ -1,6 +1,6 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.motor_logico.reglas import recomendar_productos
@@ -15,6 +15,44 @@ class SolicitudIA(BaseModel):
 
 class DatosIA(BaseModel):
     datos: dict
+
+class RecomendacionIA(BaseModel):
+    idProducto: int = Field(gt=0)
+    razon: str = Field(min_length=1, max_length=300)
+
+class RespuestaRecomendacionIA(BaseModel):
+    mensaje: str = Field(min_length=1, max_length=500)
+    productos: list[RecomendacionIA] = Field(default_factory=list)
+
+class ProductoPedidoIA(RecomendacionIA):
+    cantidad: int = Field(gt=0, le=1000)
+
+class RespuestaPedidoIA(BaseModel):
+    mensaje: str = Field(min_length=1, max_length=500)
+    productos: list[ProductoPedidoIA] = Field(default_factory=list)
+
+class RespuestaResumenIA(BaseModel):
+    resumen: str = Field(min_length=1, max_length=2000)
+    puntos_clave: list[str] = Field(default_factory=list, max_length=20)
+    recomendacion: str = Field(min_length=1, max_length=1000)
+
+class AlertaIA(BaseModel):
+    ingrediente: str | int
+    prioridad: str = Field(min_length=1, max_length=30)
+    accion: str = Field(min_length=1, max_length=500)
+
+class RespuestaAlertasIA(BaseModel):
+    resumen: str = Field(min_length=1, max_length=2000)
+    alertas: list[AlertaIA] = Field(default_factory=list, max_length=100)
+
+def _respuesta_validada(modelo, resultado: dict):
+    try:
+        return modelo.model_validate(resultado)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini devolvió una estructura que no cumple el contrato esperado.",
+        ) from exc
 
 @router.get("/recomendaciones")
 def recomendaciones(limite: int = Query(default=5, ge=1, le=20), db: Session = Depends(get_db)):
@@ -54,19 +92,19 @@ def recomendacion_ia(datos: SolicitudIA, db: Session = Depends(get_db)):
         f"Solicitud del cliente: {datos.solicitud}\n"
         f"Catálogo validado:\n{json.dumps(catalogo, ensure_ascii=False)}"
     )
-    resultado = consultar_gemini(prompt)
+    resultado = _respuesta_validada(RespuestaRecomendacionIA, consultar_gemini(prompt))
 
     productos_validos = {producto["idProducto"]: producto for producto in catalogo}
     recomendaciones = []
-    for sugerencia in resultado.get("productos", []):
-        producto = productos_validos.get(sugerencia.get("idProducto"))
+    for sugerencia in resultado.productos:
+        producto = productos_validos.get(sugerencia.idProducto)
         if producto:
             recomendaciones.append({
                 **producto,
-                "motivo": sugerencia.get("razon", "Coincide con la solicitud del cliente."),
+                "motivo": sugerencia.razon,
             })
     return {
-        "mensaje": str(resultado.get("mensaje", "Estas opciones pueden interesarle al cliente.")),
+        "mensaje": resultado.mensaje,
         "productos": recomendaciones[:datos.limite],
         "motor_principal": True,
         "ia": "gemini",
@@ -76,35 +114,35 @@ def recomendacion_ia(datos: SolicitudIA, db: Session = Depends(get_db)):
 def asistente_pedido(datos: SolicitudIA, db: Session = Depends(get_db)):
     productos = recomendar_productos(db, 20)
     catalogo = [{"idProducto": p.idProducto, "nombre": p.nombre, "precio": float(p.precio), "descripcion": p.descripcion} for p in productos]
-    resultado = consultar_gemini(
+    resultado = _respuesta_validada(RespuestaPedidoIA, consultar_gemini(
         "Eres asistente de pedidos de Café Lenca. Convierte la solicitud en una propuesta usando "
         "solo el catálogo. Devuelve JSON con mensaje y productos, donde cada producto contiene "
         "idProducto, cantidad y razon. No inventes productos ni precios. "
         f"Solicitud: {datos.solicitud}\nCatálogo: {json.dumps(catalogo, ensure_ascii=False)}"
-    )
+    ))
     validos = {p["idProducto"]: p for p in catalogo}
     lineas = []
-    for item in resultado.get("productos", []):
-        producto = validos.get(item.get("idProducto"))
-        if producto and isinstance(item.get("cantidad"), int) and item["cantidad"] > 0:
-            lineas.append({**producto, "cantidad": item["cantidad"], "motivo": item.get("razon", "Coincide con la solicitud.")})
-    return {"mensaje": resultado.get("mensaje", "Propuesta lista."), "productos": lineas[:datos.limite], "motor_principal": True}
+    for item in resultado.productos:
+        producto = validos.get(item.idProducto)
+        if producto:
+            lineas.append({**producto, "cantidad": item.cantidad, "motivo": item.razon})
+    return {"mensaje": resultado.mensaje, "productos": lineas[:datos.limite], "motor_principal": True}
 
 @router.post("/ia/resumen-ventas")
 def resumen_ventas_ia(datos: DatosIA):
-    resultado = consultar_gemini(
+    resultado = _respuesta_validada(RespuestaResumenIA, consultar_gemini(
         "Eres analista de ventas de Café Lenca. Resume estos datos en español claro. "
         'Devuelve JSON con resumen, puntos_clave y recomendacion. No inventes cifras.\n'
         f"Datos: {json.dumps(datos.datos, ensure_ascii=False)}"
-    )
-    return resultado
+    ))
+    return resultado.model_dump()
 
 @router.post("/ia/alertas-inventario")
 def alertas_inventario_ia(datos: DatosIA):
-    resultado = consultar_gemini(
+    resultado = _respuesta_validada(RespuestaAlertasIA, consultar_gemini(
         "Eres encargado de inventario de Café Lenca. Prioriza las alertas recibidas. "
         'Devuelve JSON con resumen y alertas, cada una con ingrediente, prioridad y accion. '
         "No inventes cantidades.\n"
         f"Inventario: {json.dumps(datos.datos, ensure_ascii=False)}"
-    )
-    return resultado
+    ))
+    return resultado.model_dump()

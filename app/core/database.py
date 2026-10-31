@@ -43,7 +43,6 @@ Base = declarative_base()
 
 
 def get_db():
-    """Dependencia FastAPI: una sesión por petición."""
     if engine is None:
         raise RuntimeError(
             "Falta DATABASE_URL. Crea el archivo .env a partir de .env.example."

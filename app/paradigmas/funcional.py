@@ -12,6 +12,7 @@ def calcular_totales(subtotal: Decimal, descuento: Decimal, tasa_impuesto: Decim
     """Calcula importes sin modificar estado externo (función pura)."""
     subtotal = dinero(subtotal)
     descuento = dinero(descuento)
+    tasa_impuesto = Decimal(str(tasa_impuesto))
     base_imponible = dinero(subtotal - descuento)
     impuesto = dinero(base_imponible * tasa_impuesto)
     return {
@@ -38,7 +39,7 @@ def importes_detalles(detalles: Iterable[dict]) -> list[Decimal]:
 def productos_activos(productos: Iterable) -> list:
     """Filtra productos activos sin modificar la colección original."""
     return list(filter(
-        lambda producto: str(producto.estado).strip() in {"1", "A", "a"},
+        lambda producto: str(producto.estado).strip().upper() in {"1", "A", "ACTIVO"},
         productos,
     ))
 
