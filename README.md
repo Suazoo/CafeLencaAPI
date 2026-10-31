@@ -103,8 +103,6 @@ GEMINI_API_KEY=tu_clave
 GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
-Nunca coloques la clave en Vue, en el navegador, en GitHub ni en este README.
-
 ### Endpoint de IA
 
 `POST /motor-logico/ia`
